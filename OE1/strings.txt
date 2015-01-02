@@ -1,0 +1,7 @@
+PLUGIN_OE1_MODULE_NAME
+	DE	Ö1
+	EN	Ö1
+
+PLUGIN_OE1_MODULE_NAME_DESC
+	DE	Zugriff auf den Live Stream und das 7-Tage-Archiv des österreichischen Radiosenders Ö1. 
+	EN	Access to the live stream and the 7-day-archive of the Austrian radio station Ö1.

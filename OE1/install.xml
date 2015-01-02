@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<extension>
+	<id>D9838EDA-B7BE-4E84-BC72-C7B0FC7577DA</id>
+	<name>PLUGIN_OE1_MODULE_NAME</name>
+	<module>Plugins::OE1::Plugin</module>
+	<version>1.0.0</version>
+	<description>PLUGIN_OE1_MODULE_NAME_DESC</description>
+	<creator>David Tischler</creator>
+	<defaultState>enabled</defaultState>
+	<homepageURL>https://github.com/tischlda/squeezebox-oe1</homepageURL>
+	<icon>plugins/OE1/html/images/icon.png</icon>
+	<type>2</type>
+	<targetApplication>
+		<id>Logitech Media Server</id>
+		<minVersion>7.7</minVersion>
+		<maxVersion>*</maxVersion>
+	</targetApplication>
+</extension>
