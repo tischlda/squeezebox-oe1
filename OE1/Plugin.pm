@@ -4,6 +4,7 @@ use strict;
 use base qw(Slim::Plugin::OPMLBased);
 use base qw(Slim::Utils::Log);
 use base qw(Slim::Formats::XML);
+use Date::Parse;
 use File::Spec::Functions qw(:ALL);
 use JSON::XS::VersionOneAndTwo;
 
@@ -12,6 +13,9 @@ my $log = Slim::Utils::Log->addLogCategory({
     'category' => 'plugin.oe1',
     'defaultLevel' => 'ERROR',
 });
+
+my $broadcastsUrl = 'https://audioapi.orf.at/oe1/api/json/current/broadcasts';
+my $loopStreamUrl = 'http://loopstream01.apa.at/?channel=oe1&shoutcast=0&offset=0&id=';
 
 sub initPlugin {
 	my $class = shift;
@@ -34,7 +38,7 @@ sub getData()
 {
 	my ( $client, $callback, $params, $passthrough ) = @_;
 
-	my $url = 'http://oe1.orf.at/'.$passthrough->{'url'};
+	my $url = $passthrough->{'url'};
 	my $level = $passthrough->{'level'};
 	
 	my $args = {
@@ -72,26 +76,26 @@ sub parse() {
 	my $data = from_json($$content);
 
 	for ($parserParams) {
-		if (/^today$/) { return parseToday($data); }
-		if (/^day$/) { return parseDay($data); }
-		if (/^journals$/) { return parseJournals($data); }
+		if (/^broadcasts$/) { return parseBroadcasts($data); }
+		if (/^broadcastsday_.+$/) { return parseBroadcastsDay($data, $parserParams); }
+		if (/^broadcast$/) { return parseBroadcast($data); }
 		die "Invalid parserParams '$parserParams'";
 	}
 }
 
-sub parseToday {
+sub parseBroadcasts {
 	my ($data) = @_;
 
 	my @items = map {
 		{
-			'title' => Slim::Formats::XML::unescapeAndTrim($_->{'day_label'}),
+			'title' => formatDay(Slim::Formats::XML::unescapeAndTrim($_->{'day'})),
 			'url' => \&Plugins::OE1::Plugin::getData,
 			'passthrough' => [{
-				'url' => $_->{'url'}, 
-				'level' => 'day'
+				'url' => $broadcastsUrl,
+				'level' => 'broadcastsday_'.$_->{'day'}
 			}],
 		}
-	} reverse(@{$data->{'nav'}});
+	} reverse(@{$data});
 	
 	my $feed = {
 		'title' => Slim::Formats::XML::unescapeAndTrim('7 Tage'),
@@ -102,22 +106,55 @@ sub parseToday {
 	return $feed;
 }
 
-sub parseDay{
-	my ($data) = @_;
+sub parseBroadcastsDay {
+	my ($data, $parserParams) = @_;
+	$parserParams =~ /^broadcastsday_(.+)$/;
+	my $day = $1;
+
+	my @dayData = grep { $_->{'day'} eq $1 } reverse(@{$data});
+	my $broadcasts = $dayData[0]->{'broadcasts'};
+	my @completedBroadcasts = grep { $_->{'state'} eq 'C' } @{$broadcasts};
 
 	my @items = map {
 		{
-			'description' => Slim::Formats::XML::unescapeAndTrim($_->{'info'}),
-			'title' => Slim::Formats::XML::unescapeAndTrim($_->{'time'}.' '.$_->{'title'}),
+			'description' => Slim::Formats::XML::unescapeAndTrim($_->{'subtitle'}),
+			'title' => Slim::Formats::XML::unescapeAndTrim(formatTime($_->{'scheduledStartISO'}).' '.$_->{'title'}),
+			'url' => \&Plugins::OE1::Plugin::getData,
+			'passthrough' => [{
+				'url' => $_->{'href'},
+				'level' => 'broadcast'
+			}],
+		}
+	} @completedBroadcasts;
+	
+	my $feed = {
+		'title' => Slim::Formats::XML::unescapeAndTrim('Tag'),
+		'nocache' => 1,
+		'items' => \@items
+	};
+	
+	return $feed;
+}
+
+sub parseBroadcast {
+	my ($data) = @_;
+
+	my $description = Slim::Formats::XML::unescapeAndTrim($data->{'description'});
+	my $title = Slim::Formats::XML::unescapeAndTrim(formatTime($data->{'scheduledStartISO'}).' '.$data->{'title'});
+
+	my @items = map {
+		{
+			'description' => $description,
+			'title' => $title,
 			'enclosure' => {
-				'url' => $_->{'url_stream'},
+				'url' => $loopStreamUrl.$_->{'loopStreamId'},
 				'type' => 'audio'
 			}
 		}
-	} @{$data->{'list'}};
+	} @{$data->{'streams'}};
 	
 	my $feed = {
-		'title' => Slim::Formats::XML::unescapeAndTrim($data->{'day_label'}),
+		'title' => $title,
 		'nocache' => 1,
 		'items' => \@items
 	};
@@ -125,27 +162,20 @@ sub parseDay{
 	return $feed;
 }
 
-sub parseJournals{
-	my ($data) = @_;
+sub formatTime {
+	my ($isoString) = @_;
 
-	my @items = map {
-		{
-			'description' => Slim::Formats::XML::unescapeAndTrim($_->{'info'}),
-			'title' => Slim::Formats::XML::unescapeAndTrim($_->{'info'}.' '.$_->{'title'}),
-			'enclosure' => {
-				'url' => $_->{'url_stream'},
-				'type' => 'audio'
-			}
-		}
-	} @{$data->{'list'}};
-	
-	my $feed = {
-		'title' => Slim::Formats::XML::unescapeAndTrim('Journale'),
-		'nocache' => 1,
-		'items' => \@items
-	};
+	my ($ss, $mm, $hh, $day, $month, $year, $zone) = strptime($isoString);
 
-	return $feed;
+	return sprintf("%02d:%02d", $hh, $mm)
+}
+
+sub formatDay {
+	my ($dateString) = @_;
+
+	my ($year, $month, $day) = $dateString =~ /^(\d{4})(\d{2})(\d{2})$/;
+
+	return sprintf("%04d-%02d-%02d", $year, $month, $day)
 }
 
 1;

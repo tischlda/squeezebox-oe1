@@ -5,7 +5,6 @@
   <body>
 	<outline URL="http://mp3stream3.apasf.apa.at:8000/listen.pls" text="Live" type="audio" />
 	<outline URL="http://mp3stream4.apasf.apa.at:8000/listen.pls" text="Campus" type="audio" />
-	<outline URL="http://oe1.orf.at/programm/konsole/heute" parser="Plugins::OE1::Plugin?today" text="7 Tage" />
-	<outline URL="http://oe1.orf.at/programm/konsole/journale" parser="Plugins::OE1::Plugin?journals" text="Journale" />
+	<outline URL="https://audioapi.orf.at/oe1/api/json/current/broadcasts" parser="Plugins::OE1::Plugin?broadcasts" text="7 Tage" />
   </body>
 </opml>
