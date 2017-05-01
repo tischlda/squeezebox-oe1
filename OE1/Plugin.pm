@@ -117,7 +117,6 @@ sub parseBroadcastsDay {
 
 	my @items = map {
 		{
-			'description' => Slim::Formats::XML::unescapeAndTrim($_->{'subtitle'}),
 			'title' => Slim::Formats::XML::unescapeAndTrim(formatTime($_->{'scheduledStartISO'}).' '.$_->{'title'}),
 			'url' => \&Plugins::OE1::Plugin::getData,
 			'passthrough' => [{
@@ -139,7 +138,7 @@ sub parseBroadcastsDay {
 sub parseBroadcast {
 	my ($data) = @_;
 
-	my $description = Slim::Formats::XML::unescapeAndTrim($data->{'description'});
+	my $description = Slim::Formats::XML::unescapeAndTrim($data->{'subtitle'});
 	my $title = Slim::Formats::XML::unescapeAndTrim(formatTime($data->{'scheduledStartISO'}).' '.$data->{'title'});
 
 	my @items = map {
